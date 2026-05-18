@@ -43,12 +43,12 @@ class Settings(BaseSettings):
     access_token_key_in_cookie: str = "access_token"
     refresh_token_key_in_cookie: str = "refresh_token"
 
-    access_cookie_set_delete_settings: dict[str, Any] = {
+    access_cookie_set_and_delete_settings: dict[str, Any] = {
         "key": access_token_key_in_cookie,
         "httponly": True,
         "secure": True,
     }
-    refresh_cookie_set_delete_settings: dict[str, Any] = {
+    refresh_cookie_set_and_delete_settings: dict[str, Any] = {
         "key": refresh_token_key_in_cookie,
         "httponly": True,
         "secure": True,

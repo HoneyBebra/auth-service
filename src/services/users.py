@@ -104,8 +104,8 @@ class UsersService:
 
     @staticmethod
     async def remove_tokens_from_response(response: Response) -> Response:
-        response.delete_cookie(**settings.access_cookie_set_delete_settings)
-        response.delete_cookie(**settings.refresh_cookie_set_delete_settings)
+        response.delete_cookie(**settings.access_cookie_set_and_delete_settings)
+        response.delete_cookie(**settings.refresh_cookie_set_and_delete_settings)
 
         return response
 
@@ -125,11 +125,11 @@ class UsersService:
 
         response.set_cookie(
             value=access_token,
-            **settings.access_cookie_set_delete_settings,
+            **settings.access_cookie_set_and_delete_settings,
         )
         response.set_cookie(
             value=refresh_token,
-            **settings.refresh_cookie_set_delete_settings,
+            **settings.refresh_cookie_set_and_delete_settings,
         )
 
         return response

@@ -13,6 +13,7 @@ router = APIRouter(prefix="/users")
 
 @router.post(
     "/signup",
+    status_code=status.HTTP_204_NO_CONTENT,
     description="Creating user",
     summary="Validating fields -> "
             "Checking if user already created -> "
@@ -37,7 +38,7 @@ async def signup_user(
         user_service: UsersService = Depends(get_users_service),
 ) -> Response:
     try:
-        response = Response()
+        response = Response(status_code=status.HTTP_204_NO_CONTENT)
 
         user = await user_service.create(user_data)
         response = await user_service.add_tokens_to_response(
@@ -54,6 +55,7 @@ async def signup_user(
 
 @router.post(
     "/login",
+    status_code=status.HTTP_204_NO_CONTENT,
     description="Logging in user",
     summary="Validating fields -> Checking password -> Logging in user",
     responses={
@@ -75,7 +77,7 @@ async def login_user(
     user_service: UsersService = Depends(get_users_service),
 ) -> Response:
     try:
-        response = Response()
+        response = Response(status_code=status.HTTP_204_NO_CONTENT)
         user = await user_service.authenticate(login_data)
         return await user_service.add_tokens_to_response(
             user_id=user.id,
@@ -91,7 +93,7 @@ async def login_user(
 @router.get(
     "/me",
     description="Get user data",
-    summary="Read user data from DB",
+    summary="Read user data",
     responses={
         status.HTTP_200_OK: {
             "model": ResponseUserData,

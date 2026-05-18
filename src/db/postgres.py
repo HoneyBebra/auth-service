@@ -1,7 +1,6 @@
 from typing import AsyncGenerator
 
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
-from sqlalchemy.ext.asyncio import async_sessionmaker
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from src.core.config import settings
 
@@ -17,15 +16,11 @@ engine = create_async_engine(
             "tcp_keepalives_interval": "30",
             "tcp_keepalives_count": "3",
         }
-    }
+    },
 )
 async_session = async_sessionmaker(engine, expire_on_commit=False)
 
 
 async def get_session() -> AsyncGenerator[AsyncSession, None]:
     async with async_session() as session:
-        try:
-            yield session
-        except Exception as e:
-            await session.rollback()
-            raise e
+        yield session

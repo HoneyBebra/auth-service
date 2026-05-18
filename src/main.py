@@ -11,20 +11,35 @@ from fastapi.responses import ORJSONResponse
 from src.api.v1.users import router as users_router
 from src.core.config import settings
 from src.core.logger import LOGGING
+from src.db.postgres import engine
+from src.db.redis import close_redis, get_redis_client, init_redis
 from src.gRPC.protos import user_pb2_grpc
-from src.gRPC.server import get_grpc_session
+from src.gRPC.server import GrpcServer
+from src.repositories.jwt_token import JwtTokenRepository
+from src.services.jwt import TokenValidator
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI) -> AsyncIterator:
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:  # noqa
+    await init_redis()
 
-    server = grpc.aio.server()
-    user_pb2_grpc.add_UserServicer_to_server(await get_grpc_session(), server)
-    server.add_insecure_port(f"[::]:{settings.grpc_port}")
+    jwt_token_repository = JwtTokenRepository(redis_session=get_redis_client())
+    token_validator = TokenValidator(jwt_token_repository=jwt_token_repository)
 
-    await server.start()
-    yield
-    await server.stop()
+    grpc_server = grpc.aio.server()
+    user_pb2_grpc.add_UserServicer_to_server(
+        GrpcServer(token_validator=token_validator),
+        grpc_server,
+    )
+    grpc_server.add_insecure_port(f"[::]:{settings.grpc_port}")
+
+    await grpc_server.start()
+    try:
+        yield
+    finally:
+        await grpc_server.stop(grace=5)
+        await close_redis()
+        await engine.dispose()
 
 
 app = FastAPI(

@@ -63,6 +63,10 @@ class Settings(BaseSettings):
     redis_port: str
     redis_db: int
     redis_password: str
+    redis_socket_timeout: int = 5
+    redis_socket_connect_timeout: int = 5
+    redis_max_connections: int = 50
+    redis_health_check_interval: int = 30
 
     encryption_user_data_secret_key: str
 
@@ -98,6 +102,10 @@ class Settings(BaseSettings):
             "db": self.redis_db,
             "password": self.redis_password,
             "socket_keepalive": True,
+            "socket_timeout": self.redis_socket_timeout,
+            "socket_connect_timeout": self.redis_socket_connect_timeout,
+            "max_connections": self.redis_max_connections,
+            "health_check_interval": self.redis_health_check_interval,
             "retry": Retry(ExponentialBackoff(), self.backoff_retries_count),
             "retry_on_error": [TimeoutError, ConnectionError],
         }

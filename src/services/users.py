@@ -1,12 +1,12 @@
 from typing import Any
 
-from fastapi import Depends, Response
+from fastapi import Response
 
 from src.core.config import settings
 from src.exceptions.users import InvalidCredentials, UserAlreadyExists
 from src.models.users import Users
-from src.repositories.jwt_token import JwtTokenRepository
-from src.repositories.users import UsersRepository
+from src.repositories.base.jwt_token import BaseJwtTokenRepository
+from src.repositories.base.users import BaseUsersRepository
 from src.schemas.v1.users import UserLoginSchema, UserRegisterSchema
 from src.utils.encryption import encrypt_data, hash_password, hash_user_data, verify_password
 from src.utils.jwt import create_token
@@ -15,8 +15,8 @@ from src.utils.jwt import create_token
 class UsersService:
     def __init__(
             self,
-            users_repository: UsersRepository = Depends(),
-            jwt_token_repository: JwtTokenRepository = Depends(),
+            users_repository: BaseUsersRepository,
+            jwt_token_repository: BaseJwtTokenRepository,
     ) -> None:
         self.users_repository = users_repository
         self.jwt_token_repository = jwt_token_repository
@@ -47,13 +47,21 @@ class UsersService:
         if user_data.email is None and user_data.phone_number is None:
             raise InvalidCredentials("email or phone number is required")
 
-        fields_for_db_query: dict[str, str | None] = {}
-        if user_data.email is not None:
-            fields_for_db_query["email_hash"] = hash_user_data(user_data.email)
-        if user_data.phone_number is not None:
-            fields_for_db_query["phone_number_hash"] = hash_user_data(user_data.phone_number)
+        email_hash = (
+            hash_user_data(user_data.email)
+            if user_data.email is not None
+            else None
+        )
+        phone_number_hash = (
+            hash_user_data(user_data.phone_number)
+            if user_data.phone_number is not None
+            else None
+        )
 
-        users = await self.users_repository.read(**fields_for_db_query)
+        users = await self.users_repository.read(
+            email_hash=email_hash,
+            phone_number_hash=phone_number_hash,
+        )
 
         if not users or not verify_password(user_data.password, users[0].password):
             raise InvalidCredentials

@@ -5,7 +5,7 @@ from uuid import UUID
 from jose import jwt
 
 from src.core.config import settings
-from src.exceptions.jwt import WrongTokenType
+from src.exceptions.jwt import TokenWrongTypeError
 
 
 async def create_token(
@@ -23,7 +23,7 @@ async def create_token(
     elif token_type == "refresh":
         raw_data["exp"] = iat + settings.refresh_token_expire
     else:
-        raise WrongTokenType
+        raise TokenWrongTypeError
 
     to_encode = raw_data.copy()
     to_encode.update({"type": token_type})

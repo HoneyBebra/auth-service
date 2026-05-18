@@ -1,18 +1,16 @@
 from uuid import UUID
 
-from fastapi import Depends
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from tenacity import retry
 
 from src.core.config import settings
-from src.db.postgres import get_session
 from src.models.users import Users
 from src.repositories.base.users import BaseUsersRepository
 
 
 class UsersRepository(BaseUsersRepository):
-    def __init__(self, session: AsyncSession = Depends(get_session)) -> None:
+    def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
     @retry(**settings.backoff_decorator_sqlalchemy_settings)

@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Response, status
 
 from src.core.config import settings
 from src.dependencies.jwt import get_access_token_data, get_refresh_token_data
+from src.dependencies.services import get_users_service
 from src.exceptions.users import InvalidCredentials, UserAlreadyExists
 from src.schemas.v1.jwt import UserJwtSchema
 from src.schemas.v1.users import ResponseUserData, UserLoginSchema, UserRegisterSchema
@@ -33,7 +34,7 @@ router = APIRouter(prefix="/users")
 )
 async def signup_user(
         user_data: UserRegisterSchema,
-        user_service: UsersService = Depends(),
+        user_service: UsersService = Depends(get_users_service),
 ) -> Response:
     try:
         response = Response()
@@ -71,7 +72,7 @@ async def signup_user(
 )
 async def login_user(
     login_data: UserLoginSchema,
-    user_service: UsersService = Depends()
+    user_service: UsersService = Depends(get_users_service),
 ) -> Response:
     try:
         response = Response()
@@ -126,7 +127,7 @@ async def get_user(
     },
 )
 async def refresh_tokens(
-    user_service: UsersService = Depends(),
+    user_service: UsersService = Depends(get_users_service),
     refresh_token_data: tuple[UserJwtSchema, str] = Depends(get_refresh_token_data),
     access_token_data: tuple[UserJwtSchema, str] = Depends(get_access_token_data),
 ) -> Response:
@@ -159,7 +160,7 @@ async def refresh_tokens(
     },
 )
 async def logout_user(
-    user_service: UsersService = Depends(),
+    user_service: UsersService = Depends(get_users_service),
     refresh_token_data: tuple[UserJwtSchema, str] = Depends(get_refresh_token_data),
     access_token_data: tuple[UserJwtSchema, str] = Depends(get_access_token_data),
 ) -> Response:

@@ -95,6 +95,13 @@ class UsersService:
         return None, None
 
     @staticmethod
+    async def remove_tokens_from_response(response: Response) -> Response:
+        response.delete_cookie(**settings.access_cookie_set_delete_settings)
+        response.delete_cookie(**settings.refresh_cookie_set_delete_settings)
+
+        return response
+
+    @staticmethod
     async def add_tokens_to_response(
             user_id: str,
             response: Response,
@@ -109,16 +116,12 @@ class UsersService:
         )
 
         response.set_cookie(
-            key=settings.access_token_key_in_cookie,
             value=access_token,
-            httponly=True,
-            secure=True,
+            **settings.access_cookie_set_delete_settings,
         )
         response.set_cookie(
-            key=settings.refresh_token_key_in_cookie,
             value=refresh_token,
-            httponly=True,
-            secure=True,
+            **settings.refresh_cookie_set_delete_settings,
         )
 
         return response

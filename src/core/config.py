@@ -43,6 +43,17 @@ class Settings(BaseSettings):
     access_token_key_in_cookie: str = "access_token"
     refresh_token_key_in_cookie: str = "refresh_token"
 
+    access_cookie_set_delete_settings: dict[str, Any] = {
+        "key": access_token_key_in_cookie,
+        "httponly": True,
+        "secure": True,
+    }
+    refresh_cookie_set_delete_settings: dict[str, Any] = {
+        "key": refresh_token_key_in_cookie,
+        "httponly": True,
+        "secure": True,
+    }
+
     access_token_expire: int = access_token_expire_minutes * 60
     refresh_token_expire: int = refresh_token_expire_days * 24 * 60 * 60
 

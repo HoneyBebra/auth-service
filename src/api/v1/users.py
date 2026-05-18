@@ -128,12 +128,15 @@ async def get_user(
 async def refresh_tokens(
     user_service: UsersService = Depends(),
     refresh_token_data: tuple[UserJwtSchema, str] = Depends(get_refresh_token_data),
+    access_token_data: tuple[UserJwtSchema, str] = Depends(get_access_token_data),
 ) -> Response:
     response = Response()
 
-    jwt_data, raw_token = refresh_token_data
+    jwt_data, raw_refresh_token = refresh_token_data
+    _, raw_access_token = access_token_data
 
-    await user_service.add_token_to_blacklist(raw_token, settings.refresh_token_expire)
+    await user_service.add_token_to_blacklist(raw_refresh_token, settings.refresh_token_expire)
+    await user_service.add_token_to_blacklist(raw_access_token, settings.access_token_expire)
     return await user_service.add_tokens_to_response(
         user_id=jwt_data.sub,
         response=response,
@@ -159,9 +162,11 @@ async def logout_user(
     user_service: UsersService = Depends(),
     refresh_token_data: tuple[UserJwtSchema, str] = Depends(get_refresh_token_data),
     access_token_data: tuple[UserJwtSchema, str] = Depends(get_access_token_data),
-) -> None:
+) -> Response:
 
     _, access_raw_token = access_token_data
     _, refresh_raw_token = refresh_token_data
     await user_service.add_token_to_blacklist(access_raw_token, settings.access_token_expire)
     await user_service.add_token_to_blacklist(refresh_raw_token, settings.refresh_token_expire)
+
+    return await user_service.remove_tokens_from_response(Response())

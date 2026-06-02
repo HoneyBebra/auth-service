@@ -131,7 +131,7 @@ async def get_user(
 async def refresh_tokens(
     user_service: UsersService = Depends(get_users_service),
     refresh_token_data: tuple[UserJwtSchema, str] = Depends(get_refresh_token_data),
-    access_token_data: tuple[UserJwtSchema, str] = Depends(get_access_token_data),
+    access_token_data: tuple[UserJwtSchema, str] = Depends(get_access_token_data),  # TODO: fix
 ) -> Response:
     response = Response()
 
@@ -163,7 +163,7 @@ async def refresh_tokens(
 )
 async def logout_user(
     user_service: UsersService = Depends(get_users_service),
-    refresh_token_data: tuple[UserJwtSchema, str] = Depends(get_refresh_token_data),
+    refresh_token_data: tuple[UserJwtSchema, str] = Depends(get_refresh_token_data),  # TODO: fix
     access_token_data: tuple[UserJwtSchema, str] = Depends(get_access_token_data),
 ) -> Response:
 

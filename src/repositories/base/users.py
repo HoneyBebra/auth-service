@@ -25,9 +25,6 @@ class BaseUsersRepository(ABC):
             login: str | None = None,
             phone_number_hash: str | None = None,
             email_hash: str | None = None,
-            limit: int | None = None,
-            offset: int | None = None,
-            order_by: str | None = None,
     ) -> list[Users]:
         raise NotImplementedError
 

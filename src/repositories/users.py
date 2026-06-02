@@ -44,9 +44,6 @@ class UsersRepository(BaseUsersRepository):
             login: str | None = None,
             phone_number_hash: str | None = None,
             email_hash: str | None = None,
-            limit: int | None = None,
-            offset: int | None = None,
-            order_by: str | None = None,
     ) -> list[Users]:
         query = select(Users)
 
@@ -56,12 +53,6 @@ class UsersRepository(BaseUsersRepository):
             query = query.where(Users.phone_number_hash == phone_number_hash)
         if email_hash is not None:
             query = query.where(Users.email_hash == email_hash)
-        if order_by is not None:
-            query = query.order_by(order_by)
-        if limit is not None:
-            query = query.limit(limit)
-        if offset is not None:
-            query = query.offset(offset)
 
         result = await self.session.execute(query)
         return list(result.scalars().all())

@@ -1,6 +1,7 @@
 from typing import Any, Literal
 
-from jose import ExpiredSignatureError, JWTError, jwt
+import jwt
+from jwt.exceptions import ExpiredSignatureError, InvalidTokenError
 from pydantic import ValidationError
 
 from src.core.config import settings
@@ -46,13 +47,13 @@ class TokenValidator:
     def _decode(token: str) -> dict[str, Any]:
         try:
             return jwt.decode(
-                token=token,
+                jwt=token,
                 key=settings.jwt_secret_key,
-                algorithms=settings.jwt_algorithm,
+                algorithms=[settings.jwt_algorithm],
             )
         except ExpiredSignatureError as e:
             raise TokenExpiredError from e
-        except JWTError as e:
+        except InvalidTokenError as e:
             raise TokenInvalidError(str(e)) from e
 
     @staticmethod

@@ -2,7 +2,7 @@ import time
 from typing import Literal
 from uuid import UUID
 
-from jose import jwt
+import jwt
 
 from src.core.config import settings
 from src.exceptions.jwt import TokenWrongTypeError
@@ -28,7 +28,7 @@ async def create_token(
     to_encode = raw_data.copy()
     to_encode.update({"type": token_type})
     encoded_jwt = jwt.encode(
-        claims=to_encode,
+        payload=to_encode,
         key=settings.jwt_secret_key,
         algorithm=settings.jwt_algorithm,
     )

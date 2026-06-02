@@ -1,4 +1,6 @@
 import hashlib
+import hmac
+from functools import lru_cache
 
 from cryptography.fernet import Fernet
 from passlib.context import CryptContext
@@ -7,7 +9,10 @@ from src.core.config import settings
 
 pwd_context = CryptContext(schemes=["pbkdf2_sha256"])
 
-fernet = Fernet(settings.encryption_user_data_secret_key)
+
+@lru_cache
+def get_fernet() -> Fernet:
+    return Fernet(settings.encryption_user_data_secret_key)
 
 
 def hash_password(password: str) -> str:
@@ -19,8 +24,10 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 
 def hash_user_data(data: str) -> str:
-    return hashlib.sha256(
-        f"{data}{settings.encryption_user_data_secret_key}".encode(),
+    return hmac.new(
+        settings.encryption_user_data_secret_key.encode(),
+        data.encode(),
+        hashlib.sha256,
     ).hexdigest()
 
 
@@ -29,8 +36,10 @@ def verify_user_data(data: str, hashed_data: str) -> bool:
 
 
 def encrypt_data(data: str) -> str:
+    fernet = get_fernet()
     return fernet.encrypt(data.encode()).decode()
 
 
 def decrypt_data(data: str) -> str:
+    fernet = get_fernet()
     return fernet.decrypt(data.encode()).decode()

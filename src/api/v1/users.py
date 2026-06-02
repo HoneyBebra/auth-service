@@ -110,7 +110,7 @@ async def get_user(
 ) -> ResponseUserData:
     jwt_data, _ = access_token_data
 
-    return {"id": jwt_data.sub}  # type: ignore[return-value]
+    return ResponseUserData(id=jwt_data.sub)
 
 
 @router.post(

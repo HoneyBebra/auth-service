@@ -23,8 +23,13 @@ services:
   redis_auth:
     image: redis:7.4.1
     container_name: redis_auth
+    env_file:
+      - .env
     command:
-      redis-server /usr/local/etc/redis/redis.conf
+      - redis-server
+      - /usr/local/etc/redis/redis.conf
+      - --requirepass
+      - ${REDIS_PASSWORD}
     volumes:
       - ./infra/volumes/redis:/data
       - ./infra/configs/redis:/usr/local/etc/redis

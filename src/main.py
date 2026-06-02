@@ -23,7 +23,7 @@ from src.services.jwt import TokenValidator
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:  # noqa
     await init_redis()
 
-    jwt_token_repository = JwtTokenRepository(redis_session=get_redis_client())
+    jwt_token_repository = JwtTokenRepository(session=get_redis_client())
     token_validator = TokenValidator(jwt_token_repository=jwt_token_repository)
 
     grpc_server = grpc.aio.server()

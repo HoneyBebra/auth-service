@@ -19,7 +19,7 @@ def get_users_repository(
 def get_jwt_token_repository(
     redis_session: Redis = Depends(get_redis_client),
 ) -> JwtTokenRepository:
-    return JwtTokenRepository(redis_session=redis_session)
+    return JwtTokenRepository(session=redis_session)
 
 
 def get_users_service(

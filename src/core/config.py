@@ -39,6 +39,7 @@ class Settings(BaseSettings):
     jwt_algorithm: str
     access_token_expire_minutes: int = 30
     refresh_token_expire_days: int = 7
+    jwt_blacklist_redis_prefix: str = "auth:jwt:bl"
 
     access_token_key_in_cookie: str = "access_token"
     refresh_token_key_in_cookie: str = "refresh_token"

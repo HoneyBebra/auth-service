@@ -22,6 +22,7 @@ ENV_FILE = BASE_DIR / ".env"
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=ENV_FILE)
 
+    # --------------- Postgres -----------------
     postgres_user: str
     postgres_password: str
     postgres_db: str
@@ -29,12 +30,33 @@ class Settings(BaseSettings):
     postgres_port: str
     postgres_echo: bool
 
+    @property
+    def postgres_dsn(self) -> str:
+        return (
+            f"postgresql+asyncpg://"
+            f"{self.postgres_user}:"
+            f"{self.postgres_password}@"
+            f"{self.postgres_host}:"
+            f"{self.postgres_port}/"
+            f"{self.postgres_db}"
+        )
+
+    # --------------- App ----------------------
     api_v1_prefix: str = "/auth/api/v1"
 
     app_name: str
     app_description: str
     app_version: str
 
+    password_min_length: int = 8
+
+    encryption_user_data_secret_key: str
+
+    backoff_retries_count: int = 10
+
+    grpc_port: int = 50051
+
+    # --------------- jwt ----------------------
     jwt_secret_key: str
     jwt_algorithm: str
     access_token_expire_minutes: int = 30
@@ -47,8 +69,7 @@ class Settings(BaseSettings):
     access_token_expire: int = access_token_expire_minutes * 60
     refresh_token_expire: int = refresh_token_expire_days * 24 * 60 * 60
 
-    password_min_length: int = 8
-
+    # --------------- Redis --------------------
     redis_host: str
     redis_port: str
     redis_db: int
@@ -58,12 +79,23 @@ class Settings(BaseSettings):
     redis_max_connections: int = 50
     redis_health_check_interval: int = 30
 
-    encryption_user_data_secret_key: str
+    @property
+    def redis_settings(self) -> dict[str, Any]:
+        return {
+            "host": self.redis_host,
+            "port": self.redis_port,
+            "db": self.redis_db,
+            "password": self.redis_password,
+            "socket_keepalive": True,
+            "socket_timeout": self.redis_socket_timeout,
+            "socket_connect_timeout": self.redis_socket_connect_timeout,
+            "max_connections": self.redis_max_connections,
+            "health_check_interval": self.redis_health_check_interval,
+            "retry": Retry(ExponentialBackoff(), self.backoff_retries_count),
+            "retry_on_error": [TimeoutError, ConnectionError],
+        }
 
-    backoff_retries_count: int = 10
-
-    grpc_port: int = 50051
-
+    # --------------- Cookies ------------------
     __cookie_base_settings: dict[str, Any] = {
         "httponly": True,
         "secure": True,
@@ -90,6 +122,7 @@ class Settings(BaseSettings):
     }
     refresh_cookie_delete_settings: dict[str, Any] = __refresh_cookie_base_settings
 
+    # --------------- SQLAlchemy ---------------
     @property
     def backoff_decorator_sqlalchemy_settings(self) -> dict[str, Any]:
         return {
@@ -97,33 +130,6 @@ class Settings(BaseSettings):
             "wait":  wait_exponential(multiplier=1, min=2, max=60),
             "retry": retry_if_exception_type((OperationalError, DisconnectionError)),
             "reraise": True,
-        }
-
-    @property
-    def postgres_dsn(self) -> str:
-        return (
-            f"postgresql+asyncpg://"
-            f"{self.postgres_user}:"
-            f"{self.postgres_password}@"
-            f"{self.postgres_host}:"
-            f"{self.postgres_port}/"
-            f"{self.postgres_db}"
-        )
-
-    @property
-    def redis_settings(self) -> dict[str, Any]:
-        return {
-            "host": self.redis_host,
-            "port": self.redis_port,
-            "db": self.redis_db,
-            "password": self.redis_password,
-            "socket_keepalive": True,
-            "socket_timeout": self.redis_socket_timeout,
-            "socket_connect_timeout": self.redis_socket_connect_timeout,
-            "max_connections": self.redis_max_connections,
-            "health_check_interval": self.redis_health_check_interval,
-            "retry": Retry(ExponentialBackoff(), self.backoff_retries_count),
-            "retry_on_error": [TimeoutError, ConnectionError],
         }
 
 

@@ -31,7 +31,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:  # noqa
         GrpcServer(token_validator=token_validator),
         grpc_server,
     )
-    grpc_server.add_insecure_port(f"[::]:{settings.grpc_port}")
+    grpc_server.add_insecure_port(f"[::]:{settings.app.grpc_port}")
 
     await grpc_server.start()
     try:
@@ -43,16 +43,16 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:  # noqa
 
 
 app = FastAPI(
-    title=settings.app_name,
-    description=settings.app_description,
-    version=settings.app_version,
-    docs_url=f"{settings.api_v1_prefix}/openapi",
-    openapi_url=f"{settings.api_v1_prefix}/openapi.json",
+    title=settings.app.name,
+    description=settings.app.description,
+    version=settings.app.version,
+    docs_url=f"{settings.app.api_v1_prefix}/openapi",
+    openapi_url=f"{settings.app.api_v1_prefix}/openapi.json",
     default_response_class=ORJSONResponse,
     lifespan=lifespan,
 )
 
-router = APIRouter(prefix=settings.api_v1_prefix)
+router = APIRouter(prefix=settings.app.api_v1_prefix)
 router.include_router(users_router)
 app.include_router(router)
 

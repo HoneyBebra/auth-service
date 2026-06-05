@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from tenacity import retry
 
 from src.core.config import settings
+from src.core.config.postgres import sqlalchemy_backoff_decorator_settings
 from src.models.users import Users
 from src.repositories.base.users import BaseUsersRepository
 
@@ -13,7 +14,7 @@ class UsersRepository(BaseUsersRepository):
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
-    @retry(**settings.backoff_decorator_sqlalchemy_settings)
+    @retry(**sqlalchemy_backoff_decorator_settings(settings.app.backoff_retries_count))
     async def create(
             self,
             login: str,
@@ -38,7 +39,7 @@ class UsersRepository(BaseUsersRepository):
 
         return user
 
-    @retry(**settings.backoff_decorator_sqlalchemy_settings)
+    @retry(**sqlalchemy_backoff_decorator_settings(settings.app.backoff_retries_count))
     async def read(
             self,
             login: str | None = None,
@@ -57,7 +58,7 @@ class UsersRepository(BaseUsersRepository):
         result = await self.session.execute(query)
         return list(result.scalars().all())
 
-    @retry(**settings.backoff_decorator_sqlalchemy_settings)
+    @retry(**sqlalchemy_backoff_decorator_settings(settings.app.backoff_retries_count))
     async def update(  # type: ignore[empty-body]
             self,
             user_id: UUID,
@@ -68,6 +69,6 @@ class UsersRepository(BaseUsersRepository):
     ) -> Users:
         ...
 
-    @retry(**settings.backoff_decorator_sqlalchemy_settings)
+    @retry(**sqlalchemy_backoff_decorator_settings(settings.app.backoff_retries_count))
     async def delete(self, user_id: UUID) -> None:  # type: ignore[empty-body]
         ...

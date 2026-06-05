@@ -20,4 +20,4 @@ class JwtTokenRepository(BaseJwtTokenRepository):
 
     @staticmethod
     def _blacklist_key(token: str) -> str:
-        return f"{settings.jwt_blacklist_redis_prefix}:{token}"
+        return f"{settings.jwt.blacklist_redis_prefix}:{token}"

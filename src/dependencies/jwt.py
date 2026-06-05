@@ -16,14 +16,14 @@ from src.services.jwt import TokenValidator
 
 
 async def get_access_token_data(
-    access_token: str | None = Cookie(default=None, alias=settings.access_token_key_in_cookie),
+    access_token: str | None = Cookie(default=None, alias=settings.jwt.access_token_key_in_cookie),
     token_validator: TokenValidator = Depends(get_token_validator),
 ) -> tuple[UserJwtSchema, str]:
     return await _validate(access_token, "access", token_validator)
 
 
 async def get_refresh_token_data(
-    refresh_token: str | None = Cookie(default=None, alias=settings.refresh_token_key_in_cookie),
+    refresh_token: str | None = Cookie(default=None, alias=settings.jwt.refresh_token_key_in_cookie),
     token_validator: TokenValidator = Depends(get_token_validator),
 ) -> tuple[UserJwtSchema, str]:
     return await _validate(refresh_token, "refresh", token_validator)

@@ -7,7 +7,7 @@ _redis_client: Redis | None = None
 
 async def init_redis() -> Redis:
     global _redis_client
-    _redis_client = Redis(**settings.redis_settings)
+    _redis_client = Redis(**settings.redis.client_settings(settings.app.backoff_retries_count))
     return _redis_client
 
 

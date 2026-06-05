@@ -48,8 +48,8 @@ class TokenValidator:
         try:
             return jwt.decode(
                 jwt=token,
-                key=settings.jwt_secret_key,
-                algorithms=[settings.jwt_algorithm],
+                key=settings.jwt.secret_key,
+                algorithms=[settings.jwt.algorithm],
             )
         except ExpiredSignatureError as e:
             raise TokenExpiredError from e

@@ -12,7 +12,7 @@ pwd_context = CryptContext(schemes=["pbkdf2_sha256"])
 
 @lru_cache
 def get_fernet() -> Fernet:
-    return Fernet(settings.encryption_user_data_secret_key)
+    return Fernet(settings.encryption.user_data_secret_key)
 
 
 def hash_password(password: str) -> str:
@@ -25,7 +25,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 def hash_user_data(data: str) -> str:
     return hmac.new(
-        settings.encryption_user_data_secret_key.encode(),
+        settings.encryption.user_data_secret_key.encode(),
         data.encode(),
         hashlib.sha256,
     ).hexdigest()

@@ -1,5 +1,4 @@
 from typing import Annotated
-from uuid import UUID
 
 from pydantic import AfterValidator, BaseModel, EmailStr, Field, model_validator
 
@@ -37,4 +36,4 @@ class UserLoginSchema(UserEntersDataBaseSchema):
 
 
 class ResponseUserData(BaseModel):
-    id: UUID
+    id: str

@@ -8,13 +8,13 @@ from src.exceptions.jwt import (
     TokenWrongTypeError,
 )
 from src.gRPC.protos import user_pb2, user_pb2_grpc
-from src.services.jwt import TokenValidator
+from src.services.jwt import JwtService
 
 
 class GrpcServer(user_pb2_grpc.UserServicer):  # type: ignore[name-defined]
-    def __init__(self, token_validator: TokenValidator) -> None:
+    def __init__(self, jwt_service: JwtService) -> None:
         super().__init__()
-        self._token_validator = token_validator
+        self._jwt_service = jwt_service
 
     async def GetUserInfoByToken(  # noqa: N802
         self,
@@ -22,7 +22,7 @@ class GrpcServer(user_pb2_grpc.UserServicer):  # type: ignore[name-defined]
         context: grpc.aio.ServicerContext,
     ) -> user_pb2.GetUserInfoByTokenResponse:  # type: ignore[name-defined]
         try:
-            user_data, _ = await self._token_validator.validate(
+            user_data, _ = await self._jwt_service.validate(
                 raw_token=request.access_token,
                 expected_type="access",
             )

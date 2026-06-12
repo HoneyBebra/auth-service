@@ -6,7 +6,7 @@ from src.db.postgres import get_session
 from src.db.redis import get_redis_client
 from src.repositories.jwt_token import JwtTokenRepository
 from src.repositories.users import UsersRepository
-from src.services.jwt import TokenValidator
+from src.services.jwt import JwtService
 from src.services.users import UsersService
 
 
@@ -32,7 +32,7 @@ def get_users_service(
     )
 
 
-def get_token_validator(
+def get_jwt_service(
     jwt_token_repository: JwtTokenRepository = Depends(get_jwt_token_repository)
-) -> TokenValidator:
-    return TokenValidator(jwt_token_repository=jwt_token_repository)
+) -> JwtService:
+    return JwtService(jwt_token_repository=jwt_token_repository)

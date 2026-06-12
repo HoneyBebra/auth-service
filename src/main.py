@@ -16,7 +16,7 @@ from src.db.redis import close_redis, get_redis_client, init_redis
 from src.gRPC.protos import user_pb2_grpc
 from src.gRPC.server import GrpcServer
 from src.repositories.jwt_token import JwtTokenRepository
-from src.services.jwt import TokenValidator
+from src.services.jwt import JwtService
 
 
 @asynccontextmanager
@@ -24,11 +24,11 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:  # noqa
     await init_redis()
 
     jwt_token_repository = JwtTokenRepository(session=get_redis_client())
-    token_validator = TokenValidator(jwt_token_repository=jwt_token_repository)
+    jwt_service = JwtService(jwt_token_repository=jwt_token_repository)
 
     grpc_server = grpc.aio.server()
     user_pb2_grpc.add_UserServicer_to_server(
-        GrpcServer(token_validator=token_validator),
+        GrpcServer(jwt_service=jwt_service),
         grpc_server,
     )
     grpc_server.add_insecure_port(f"[::]:{settings.app.grpc_port}")

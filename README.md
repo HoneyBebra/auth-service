@@ -50,3 +50,18 @@ requires a https connection.
     │ updated_at             │ datetime │             │           │ not null │         │
     └──────────────────────────────────────────────────────────────────────────────────┘
 ```
+
+## Redis schema:
+```
+    ┌──────────────────┬──────────────────────────────────────────────┬──────────────┬────────────────────────────────────────────────────────────────────────────┐
+    │ prefix           │ key pattern                                  │ value        │ TTL                                                                        │
+    ├──────────────────┼──────────────────────────────────────────────┼──────────────┼────────────────────────────────────────────────────────────────────────────┤
+    │ auth:jwt:bl      │ auth:jwt:bl:{jwt_token}                      │ "none"       │ settings.jwt.access_token_expire / settings.jwt.refresh_token_expire       │
+    │ auth:rl          │ auth:rl:login:fail:{identifier_hash}         │ int (count)  │ settings.rate_limit.login_failed_window_seconds                            │
+    │ auth:rl          │ auth:rl:login:lock:{identifier_hash}         │ "none"       │ settings.rate_limit.login_lock_duration_seconds                            │
+    └──────────────────┴──────────────────────────────────────────────┴──────────────┴────────────────────────────────────────────────────────────────────────────┘
+```
+
+## Architecture contracts
+
+See [docs/contracts.md](docs/contracts.md).

@@ -16,7 +16,7 @@ from src.repositories.base.jwt_token import BaseJwtTokenRepository
 from src.schemas.v1.jwt import UserJwtSchema
 
 
-class TokenValidator:
+class JwtService:
     def __init__(self, jwt_token_repository: BaseJwtTokenRepository) -> None:
         self._jwt_token_repository = jwt_token_repository
 

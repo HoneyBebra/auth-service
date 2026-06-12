@@ -10,6 +10,7 @@ from src.core.config.app import AppSettings
 from src.core.config.encryption import EncryptionSettings
 from src.core.config.jwt import JwtSettings
 from src.core.config.postgres import PostgresSettings
+from src.core.config.rate_limit import RateLimitSettings
 from src.core.config.redis import RedisSettings
 from src.core.logger import LOGGING
 
@@ -24,6 +25,7 @@ class Settings(BaseSettings):
     jwt: JwtSettings = Field(default_factory=JwtSettings)
     app: AppSettings = Field(default_factory=AppSettings)
     encryption: EncryptionSettings = Field(default_factory=EncryptionSettings)
+    rate_limit: RateLimitSettings = Field(default_factory=RateLimitSettings)
 
 
 @lru_cache

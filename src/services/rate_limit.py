@@ -60,7 +60,7 @@ class RateLimitService:
 
         return True, -1
 
-    async def increment_login_failure(
+    async def increment_operation_failure(
             self,
             operation: str,
             email: str | None = None,
@@ -96,7 +96,7 @@ class RateLimitService:
 
         return max(email_fails_count, phone_fails_count)
 
-    async def record_login_success(
+    async def record_operation_success(
             self,
             operation: str,
             email: str | None = None,
@@ -122,12 +122,14 @@ class RateLimitService:
 
         return None
 
-    async def lock(
+    async def lock_operation(
             self,
             operation: str,
             email: str | None = None,
             phone: str | None = None,
-    ) -> None:
+    ) -> int:
+        """returns TTL of lock key"""
+
         if email is None and phone is None:
             raise WrongParams([email, phone])
 
@@ -137,11 +139,17 @@ class RateLimitService:
             kind=kind,
         )
 
+        ttl = None
         if email is not None:
             await self.rate_limit_repository.lock(
                 identifier_hash=hash_user_data(email),
                 operation=operation,
                 expires_in=expires_in,
+            )
+            ttl = await self.rate_limit_repository.get_ttl(
+                identifier_hash=hash_user_data(email),
+                kind=kind,
+                operation=operation,
             )
         if phone is not None:
             await self.rate_limit_repository.lock(
@@ -149,6 +157,15 @@ class RateLimitService:
                 operation=operation,
                 expires_in=expires_in,
             )
+            ttl = await self.rate_limit_repository.get_ttl(
+                identifier_hash=hash_user_data(phone),
+                kind=kind,
+                operation=operation,
+            )
+
+        if ttl is None:
+            return 0
+        return ttl
 
     def _get_expires_in_by_params(self, operation: str, kind: str) -> int:
         operation_settings = self.ttl_by_operation.get(operation)

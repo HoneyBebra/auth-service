@@ -2,11 +2,12 @@ from fastapi import APIRouter, Depends, HTTPException, Response, status
 
 from src.core.config import settings
 from src.dependencies.jwt import get_access_token_data, get_refresh_token_data
-from src.dependencies.services import get_users_service
+from src.dependencies.services import get_users_service, get_rate_limit_service
 from src.exceptions.users import InvalidCredentials, UserAlreadyExists
 from src.schemas.v1.jwt import UserJwtSchema
 from src.schemas.v1.users import ResponseUserData, UserLoginSchema, UserRegisterSchema
 from src.services.users import UsersService
+from src.services.rate_limit import RateLimitService
 
 router = APIRouter(prefix="/users")
 
@@ -34,8 +35,8 @@ router = APIRouter(prefix="/users")
     },
 )
 async def signup_user(
-        user_data: UserRegisterSchema,
-        user_service: UsersService = Depends(get_users_service),
+    user_data: UserRegisterSchema,
+    user_service: UsersService = Depends(get_users_service),
 ) -> Response:
     try:
         response = Response(status_code=status.HTTP_204_NO_CONTENT)
@@ -69,21 +70,59 @@ async def signup_user(
         },
         status.HTTP_422_UNPROCESSABLE_ENTITY: {
             "description": "Wrong data was passed",
+        },
+        status.HTTP_423_LOCKED: {
+            "model": None,
+            "description": "Too many login attempts, retry after...",
         }
     },
 )
 async def login_user(
     login_data: UserLoginSchema,
     user_service: UsersService = Depends(get_users_service),
+    rate_limit_service: RateLimitService = Depends(get_rate_limit_service)
 ) -> Response:
     try:
         response = Response(status_code=status.HTTP_204_NO_CONTENT)
+
+        is_allowed, ttl = await rate_limit_service.is_operation_allowed(
+            operation="login",
+            email=login_data.email,
+            phone=login_data.phone_number,
+        )
+        if not is_allowed:
+            raise HTTPException(
+                status_code=status.HTTP_423_LOCKED,
+                headers={"Retry-After": str(ttl)},
+                detail=f"Login is locked, retry after {ttl} seconds.",
+            )
         user = await user_service.authenticate(login_data)
+        await rate_limit_service.record_operation_success(
+            operation="login",
+            email=login_data.email,
+            phone=login_data.phone_number,
+        )
         return await user_service.add_tokens_to_response(
             user_id=user.id,
             response=response,
         )
     except InvalidCredentials as e:
+        fails_count = await rate_limit_service.increment_operation_failure(
+            operation="login",
+            email=login_data.email,
+            phone=login_data.phone_number,
+        )
+        if fails_count >= settings.rate_limit.login_max_failed_attempts:
+            ttl = await rate_limit_service.lock_operation(
+                operation="login",
+                email=login_data.email,
+                phone=login_data.phone_number,
+            )
+            raise HTTPException(
+                status_code=status.HTTP_423_LOCKED,
+                headers={"Retry-After": str(ttl)},
+                detail=f"Login failed after {fails_count} attempts, retry after {ttl} seconds.",
+            )
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=e.message,

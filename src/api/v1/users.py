@@ -2,12 +2,12 @@ from fastapi import APIRouter, Depends, HTTPException, Response, status
 
 from src.core.config import settings
 from src.dependencies.jwt import get_access_token_data, get_refresh_token_data
-from src.dependencies.services import get_users_service, get_rate_limit_service
+from src.dependencies.services import get_rate_limit_service, get_users_service
 from src.exceptions.users import InvalidCredentials, UserAlreadyExists
 from src.schemas.v1.jwt import UserJwtSchema
 from src.schemas.v1.users import ResponseUserData, UserLoginSchema, UserRegisterSchema
-from src.services.users import UsersService
 from src.services.rate_limit import RateLimitService
+from src.services.users import UsersService
 
 router = APIRouter(prefix="/users")
 
@@ -122,7 +122,7 @@ async def login_user(
                 status_code=status.HTTP_423_LOCKED,
                 headers={"Retry-After": str(ttl)},
                 detail=f"Login failed after {fails_count} attempts, retry after {ttl} seconds.",
-            )
+            ) from e
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=e.message,

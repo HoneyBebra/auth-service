@@ -2,13 +2,13 @@ from fastapi import Depends
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.services.rate_limit import RateLimitService
 from src.db.postgres import get_session
 from src.db.redis import get_redis_client
 from src.repositories.jwt_token import JwtTokenRepository
 from src.repositories.rate_limit import RateLimitRepository
 from src.repositories.users import UsersRepository
 from src.services.jwt import JwtService
+from src.services.rate_limit import RateLimitService
 from src.services.users import UsersService
 
 

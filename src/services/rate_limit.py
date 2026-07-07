@@ -1,18 +1,23 @@
+import logging
+
 from src.core.config import settings
+from src.core.logging.events import Events, log_event
 from src.exceptions.common import WrongParams
 from src.repositories.base.rate_limit import BaseRateLimitRepository
 from src.utils.encryption import hash_user_data
 
+logger = logging.getLogger(__name__)
+
 
 class RateLimitService:
-    """Rate limiting by email/phone hash in Redis (fail counters and temporary locks)."""
+    """Rate limiting by email/phone hash (fail counters and temporary locks)."""
 
     def __init__(
             self,
             rate_limit_repository: BaseRateLimitRepository,
     ) -> None:
         """
-        :param rate_limit_repository: Redis storage for fail counters and lock keys.
+        :param rate_limit_repository: storage for fail counters and lock keys.
         """
         self.rate_limit_repository = rate_limit_repository
 
@@ -20,6 +25,14 @@ class RateLimitService:
             "login": {
                 "fail": settings.rate_limit.login_failed_window_seconds,
                 "lock": settings.rate_limit.login_lock_duration_seconds,
+            },
+        }
+
+        self.event_by_operation: dict[str, dict[str, dict[str, str | int]]] = {
+            "login": {
+                "fail": Events.rate_limit_login_failed,
+                "lock": Events.rate_limit_login_locked,
+                "success": Events.rate_limit_login_success_reset,
             },
         }
 
@@ -32,7 +45,7 @@ class RateLimitService:
         """
         Check whether the operation is allowed for the given identifiers.
 
-        Looks up the Redis lock key per identifier (OR semantics: email first, then phone).
+        Looks up the lock key per identifier (OR semantics: email first, then phone).
 
         :param operation: Rate-limit scope, e.g. ``"login"``.
         :param email: Plain email; hashed before lookup. Optional if ``phone`` is set.
@@ -49,26 +62,16 @@ class RateLimitService:
             "kind": "lock"
         }
 
-        if email is not None:
+        identifier_data = self._get_identifier_not_none_data(email, phone)
+        for identifier in identifier_data:
+            identifier_hash = hash_user_data(identifier)
             is_lock = await self.rate_limit_repository.is_exists(
-                identifier_hash=hash_user_data(email),
+                identifier_hash=identifier_hash,
                 **params,
             )
             if is_lock:
                 ttl = await self.rate_limit_repository.get_ttl(
-                    identifier_hash=hash_user_data(email),
-                    **params,
-                )
-                return False, ttl
-
-        if phone is not None:
-            is_lock = await self.rate_limit_repository.is_exists(
-                identifier_hash=hash_user_data(phone),
-                **params,
-            )
-            if is_lock:
-                ttl = await self.rate_limit_repository.get_ttl(
-                    identifier_hash=hash_user_data(phone),
+                    identifier_hash=identifier_hash,
                     **params,
                 )
                 return False, ttl
@@ -82,7 +85,7 @@ class RateLimitService:
             phone: str | None = None,
     ) -> int:
         """
-        Record a failed attempt and bump the fail counter in Redis.
+        Record a failed attempt and bump the fail counter.
 
         Increments ``fail`` keys for each provided identifier; TTL is set on first increment
         in the window (see ``ttl_by_operation``).
@@ -97,29 +100,39 @@ class RateLimitService:
             raise WrongParams([email, phone])
 
         kind = "fail"
+        event_name, event_log_level = self._get_event_name_and_log_level_by_params(
+            operation=operation,
+            event_key=kind,
+        )
+
         expires_in = self._get_expires_in_by_params(
             operation=operation,
             kind=kind,
         )
 
-        email_fails_count = 0
-        phone_fails_count = 0
-        if email is not None:
-            email_fails_count = await self.rate_limit_repository.increment_counter(
-                identifier_hash=hash_user_data(email),
+        identifier_data = self._get_identifier_not_none_data(email, phone)
+
+        fails_counts = []
+
+        for identifier in identifier_data:
+            identifier_hash = hash_user_data(identifier)
+            fails_count = await self.rate_limit_repository.increment_counter(
+                identifier_hash=identifier_hash,
                 kind=kind,
                 operation=operation,
                 expires_in_only_after_first_increment=expires_in,
             )
-        if phone is not None:
-            phone_fails_count = await self.rate_limit_repository.increment_counter(
-                identifier_hash=hash_user_data(phone),
-                kind=kind,
+            fails_counts.append(fails_count)
+            log_event(
+                logger=logger,
+                level=event_log_level,
+                event=event_name,
+                identifier_hash=identifier_hash,
+                attempt_count=fails_count,
                 operation=operation,
-                expires_in_only_after_first_increment=expires_in,
             )
 
-        return max(email_fails_count, phone_fails_count)
+        return max(fails_counts)
 
     async def record_operation_success(
             self,
@@ -142,17 +155,25 @@ class RateLimitService:
             raise WrongParams([email, phone])
 
         kind = "fail"
+        event_name, event_log_level = self._get_event_name_and_log_level_by_params(
+            operation=operation,
+            event_key="success",
+        )
 
-        if email is not None:
+        identifier_data = self._get_identifier_not_none_data(email, phone)
+
+        for identifier in identifier_data:
+            identifier_hash = hash_user_data(identifier)
             await self.rate_limit_repository.delete(
-                identifier_hash=hash_user_data(email),
+                identifier_hash=identifier_hash,
                 kind=kind,
                 operation=operation,
             )
-        if phone is not None:
-            await self.rate_limit_repository.delete(
-                identifier_hash=hash_user_data(phone),
-                kind=kind,
+            log_event(
+                logger=logger,
+                level=event_log_level,
+                event=event_name,
+                identifier_hash=identifier_hash,
                 operation=operation,
             )
 
@@ -180,32 +201,38 @@ class RateLimitService:
             raise WrongParams([email, phone])
 
         kind = "lock"
+        event_name, event_log_level = self._get_event_name_and_log_level_by_params(
+            operation=operation,
+            event_key=kind,
+        )
+
         expires_in = self._get_expires_in_by_params(
             operation=operation,
             kind=kind,
         )
 
+        identifier_data = self._get_identifier_not_none_data(email, phone)
+
         ttl = None
-        if email is not None:
+
+        for identifier in identifier_data:
+            identifier_hash = hash_user_data(identifier)
             await self.rate_limit_repository.lock(
-                identifier_hash=hash_user_data(email),
+                identifier_hash=identifier_hash,
                 operation=operation,
                 expires_in=expires_in,
             )
             ttl = await self.rate_limit_repository.get_ttl(
-                identifier_hash=hash_user_data(email),
+                identifier_hash=identifier_hash,
                 kind=kind,
                 operation=operation,
             )
-        if phone is not None:
-            await self.rate_limit_repository.lock(
-                identifier_hash=hash_user_data(phone),
-                operation=operation,
-                expires_in=expires_in,
-            )
-            ttl = await self.rate_limit_repository.get_ttl(
-                identifier_hash=hash_user_data(phone),
-                kind=kind,
+            log_event(
+                logger=logger,
+                level=event_log_level,
+                event=event_name,
+                identifier_hash=identifier_hash,
+                lock_duration=expires_in,
                 operation=operation,
             )
 
@@ -213,9 +240,29 @@ class RateLimitService:
             return 0
         return ttl
 
+    def _get_event_name_and_log_level_by_params(
+            self,
+            operation: str,
+            event_key: str,
+    ) -> tuple[str, int]:
+        operation_settings = self.event_by_operation.get(operation)
+        if operation_settings is None:
+            raise WrongParams([operation])
+        event_settings = operation_settings.get(event_key)
+        if event_settings is None:
+            raise WrongParams([operation, event_key])
+        event_name = event_settings.get("name")
+        if event_name is None:
+            raise WrongParams([event_settings])
+        event_log_level = event_settings.get("level")
+        if event_log_level is None:
+            raise WrongParams([event_settings])
+
+        return event_name, event_log_level  # type: ignore[return-value]
+
     def _get_expires_in_by_params(self, operation: str, kind: str) -> int:
         """
-        Resolve Redis TTL for an operation and key kind from ``ttl_by_operation``.
+        Resolve TTL for an operation and key kind from ``ttl_by_operation``.
 
         :param operation: Rate-limit scope, e.g. ``"login"``.
         :param kind: Key segment — ``"fail"`` (counter window) or ``"lock"`` (block duration).
@@ -230,3 +277,13 @@ class RateLimitService:
             raise WrongParams([operation, kind])
 
         return expires_in
+
+    @staticmethod
+    def _get_identifier_not_none_data(*params: str | None) -> list[str]:
+        identifier_data = []
+
+        for param in params:
+            if param is not None:
+                identifier_data.append(param)
+
+        return identifier_data

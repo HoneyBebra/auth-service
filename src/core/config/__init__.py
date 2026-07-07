@@ -5,14 +5,14 @@ from dotenv import load_dotenv
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from src.core.config._env import BASE_DIR, ENV_FILE
+from src.core.config._env import ENV_FILE
 from src.core.config.app import AppSettings
 from src.core.config.encryption import EncryptionSettings
 from src.core.config.jwt import JwtSettings
 from src.core.config.postgres import PostgresSettings
 from src.core.config.rate_limit import RateLimitSettings
 from src.core.config.redis import RedisSettings
-from src.core.logger import LOGGING
+from src.core.logging.logger import LOGGING
 
 load_dotenv()
 
@@ -36,16 +36,3 @@ def get_settings() -> Settings:
 settings = get_settings()
 
 logging_config.dictConfig(LOGGING)
-
-__all__ = [
-    "BASE_DIR",
-    "ENV_FILE",
-    "AppSettings",
-    "EncryptionSettings",
-    "JwtSettings",
-    "PostgresSettings",
-    "RedisSettings",
-    "Settings",
-    "get_settings",
-    "settings",
-]

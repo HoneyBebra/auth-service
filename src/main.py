@@ -10,7 +10,7 @@ from fastapi.responses import ORJSONResponse
 
 from src.api.v1.users import router as users_router
 from src.core.config import settings
-from src.core.logger import LOGGING
+from src.core.logging.logger import LOGGING
 from src.db.postgres import engine
 from src.db.redis import close_redis, get_redis_client, init_redis
 from src.gRPC.protos import user_pb2_grpc
@@ -20,7 +20,7 @@ from src.services.jwt import JwtService
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI) -> AsyncIterator[None]:  # noqa
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     await init_redis()
 
     jwt_token_repository = JwtTokenRepository(session=get_redis_client())

@@ -1,7 +1,7 @@
 import logging
 
 from src.core.config import settings
-from src.core.logging.events import Events, log_event
+from src.core.logging.events import Event, Events, log_event
 from src.exceptions.common import WrongParams
 from src.repositories.base.rate_limit import BaseRateLimitRepository
 from src.utils.encryption import hash_user_data
@@ -13,8 +13,8 @@ class RateLimitService:
     """Rate limiting by email/phone hash (fail counters and temporary locks)."""
 
     def __init__(
-            self,
-            rate_limit_repository: BaseRateLimitRepository,
+        self,
+        rate_limit_repository: BaseRateLimitRepository,
     ) -> None:
         """
         :param rate_limit_repository: storage for fail counters and lock keys.
@@ -28,7 +28,7 @@ class RateLimitService:
             },
         }
 
-        self.event_by_operation: dict[str, dict[str, dict[str, str | int]]] = {
+        self.event_by_operation: dict[str, dict[str, Event]] = {
             "login": {
                 "fail": Events.rate_limit_login_failed,
                 "lock": Events.rate_limit_login_locked,
@@ -37,10 +37,10 @@ class RateLimitService:
         }
 
     async def is_operation_allowed(
-            self,
-            operation: str,
-            email: str | None = None,
-            phone: str | None = None,
+        self,
+        operation: str,
+        email: str | None = None,
+        phone: str | None = None,
     ) -> tuple[bool, int]:
         """
         Check whether the operation is allowed for the given identifiers.
@@ -57,10 +57,7 @@ class RateLimitService:
         if email is None and phone is None:
             raise WrongParams([email, phone])
 
-        params = {
-            "operation": operation,
-            "kind": "lock"
-        }
+        params = {"operation": operation, "kind": "lock"}
 
         identifier_data = self._get_identifier_not_none_data(email, phone)
         for identifier in identifier_data:
@@ -79,10 +76,10 @@ class RateLimitService:
         return True, -1
 
     async def increment_operation_failure(
-            self,
-            operation: str,
-            email: str | None = None,
-            phone: str | None = None,
+        self,
+        operation: str,
+        email: str | None = None,
+        phone: str | None = None,
     ) -> int:
         """
         Record a failed attempt and bump the fail counter.
@@ -135,10 +132,10 @@ class RateLimitService:
         return max(fails_counts)
 
     async def record_operation_success(
-            self,
-            operation: str,
-            email: str | None = None,
-            phone: str | None = None,
+        self,
+        operation: str,
+        email: str | None = None,
+        phone: str | None = None,
     ) -> None:
         """
         Clear fail counters after a successful operation (e.g. valid login).
@@ -180,10 +177,10 @@ class RateLimitService:
         return None
 
     async def lock_operation(
-            self,
-            operation: str,
-            email: str | None = None,
-            phone: str | None = None,
+        self,
+        operation: str,
+        email: str | None = None,
+        phone: str | None = None,
     ) -> int:
         """
         Set a temporary lock for the given identifiers.
@@ -241,24 +238,18 @@ class RateLimitService:
         return ttl
 
     def _get_event_name_and_log_level_by_params(
-            self,
-            operation: str,
-            event_key: str,
+        self,
+        operation: str,
+        event_key: str,
     ) -> tuple[str, int]:
-        operation_settings = self.event_by_operation.get(operation)
-        if operation_settings is None:
+        operation_events = self.event_by_operation.get(operation)
+        if operation_events is None:
             raise WrongParams([operation])
-        event_settings = operation_settings.get(event_key)
-        if event_settings is None:
+        event = operation_events.get(event_key)
+        if event is None:
             raise WrongParams([operation, event_key])
-        event_name = event_settings.get("name")
-        if event_name is None:
-            raise WrongParams([event_settings])
-        event_log_level = event_settings.get("level")
-        if event_log_level is None:
-            raise WrongParams([event_settings])
 
-        return event_name, event_log_level  # type: ignore[return-value]
+        return event.name, event.level
 
     def _get_expires_in_by_params(self, operation: str, kind: str) -> int:
         """

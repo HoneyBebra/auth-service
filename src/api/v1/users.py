@@ -1,7 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 
 from src.core.config import settings
-from src.dependencies.jwt import get_access_token_data, get_refresh_token_data
+from src.dependencies.jwt import (
+    get_raw_access_token,
+    get_raw_refresh_token,
+    get_valid_access_token_data,
+    get_valid_refresh_token_data,
+)
 from src.dependencies.services import get_rate_limit_service, get_users_service
 from src.exceptions.users import InvalidCredentials, UserAlreadyExists
 from src.schemas.v1.jwt import UserJwtSchema
@@ -17,21 +22,18 @@ router = APIRouter(prefix="/users")
     status_code=status.HTTP_204_NO_CONTENT,
     description="Creating user",
     summary="Validating fields -> "
-            "Checking if user already created -> "
-            "Creating user -> "
-            "logging in user",
+    "Checking if user already created -> "
+    "Creating user -> "
+    "logging in user",
     responses={
-        status.HTTP_204_NO_CONTENT: {
-            "model": None,
-            "description": "User created and logged in"
-        },
+        status.HTTP_204_NO_CONTENT: {"model": None, "description": "User created and logged in"},
         status.HTTP_409_CONFLICT: {
             "model": None,
             "description": "User already created",
         },
         status.HTTP_422_UNPROCESSABLE_ENTITY: {
             "description": "Wrong data was passed",
-        }
+        },
     },
 )
 async def signup_user(
@@ -60,27 +62,21 @@ async def signup_user(
     description="Logging in user",
     summary="Validating fields -> Checking password -> Logging in user",
     responses={
-        status.HTTP_204_NO_CONTENT: {
-            "model": None,
-            "description": "User logged in"
-        },
-        status.HTTP_401_UNAUTHORIZED: {
-            "model": None,
-            "description": "User didn't login"
-        },
+        status.HTTP_204_NO_CONTENT: {"model": None, "description": "User logged in"},
+        status.HTTP_401_UNAUTHORIZED: {"model": None, "description": "User didn't login"},
         status.HTTP_422_UNPROCESSABLE_ENTITY: {
             "description": "Wrong data was passed",
         },
         status.HTTP_423_LOCKED: {
             "model": None,
             "description": "Too many login attempts, retry after...",
-        }
+        },
     },
 )
 async def login_user(
     login_data: UserLoginSchema,
     user_service: UsersService = Depends(get_users_service),
-    rate_limit_service: RateLimitService = Depends(get_rate_limit_service)
+    rate_limit_service: RateLimitService = Depends(get_rate_limit_service),
 ) -> Response:
     try:
         response = Response(status_code=status.HTTP_204_NO_CONTENT)
@@ -134,18 +130,15 @@ async def login_user(
     description="Get user data",
     summary="Read user data",
     responses={
-        status.HTTP_200_OK: {
-            "model": ResponseUserData,
-            "description": "User data received"
-        },
-        status.HTTP_403_FORBIDDEN: {
+        status.HTTP_200_OK: {"model": ResponseUserData, "description": "User data received"},
+        status.HTTP_401_UNAUTHORIZED: {
             "model": None,
-            "description": "No rights",
-        }
+            "description": "Unauthorized: missing, invalid, expired, revoked, or wrong-type token",
+        },
     },
 )
 async def get_user(
-    access_token_data: tuple[UserJwtSchema, str] = Depends(get_access_token_data),
+    access_token_data: tuple[UserJwtSchema, str] = Depends(get_valid_access_token_data),
 ) -> ResponseUserData:
     jwt_data, _ = access_token_data
 
@@ -157,28 +150,30 @@ async def get_user(
     description="Refresh access token",
     summary="Get new access token and replace refresh one",
     responses={
-        status.HTTP_200_OK: {
+        status.HTTP_200_OK: {"model": None, "description": "User data received"},
+        status.HTTP_401_UNAUTHORIZED: {
             "model": None,
-            "description": "User data received"
+            "description": (
+                "Unauthorized: missing, invalid, expired, revoked, or wrong-type refresh token"
+            ),
         },
-        status.HTTP_403_FORBIDDEN: {
-            "model": None,
-            "description": "No rights",
-        }
     },
 )
 async def refresh_tokens(
     user_service: UsersService = Depends(get_users_service),
-    refresh_token_data: tuple[UserJwtSchema, str] = Depends(get_refresh_token_data),
-    access_token_data: tuple[UserJwtSchema, str] = Depends(get_access_token_data),  # TODO: fix
+    refresh_token_data: tuple[UserJwtSchema, str] = Depends(get_valid_refresh_token_data),
+    raw_access_token: str | None = Depends(get_raw_access_token),
 ) -> Response:
     response = Response()
 
     jwt_data, raw_refresh_token = refresh_token_data
-    _, raw_access_token = access_token_data
 
     await user_service.add_token_to_blacklist(raw_refresh_token, settings.jwt.refresh_token_expire)
-    await user_service.add_token_to_blacklist(raw_access_token, settings.jwt.access_token_expire)
+    if raw_access_token is not None:
+        await user_service.add_token_to_blacklist(
+            raw_access_token,
+            settings.jwt.access_token_expire,
+        )
     return await user_service.add_tokens_to_response(
         user_id=jwt_data.sub,
         response=response,
@@ -190,25 +185,23 @@ async def refresh_tokens(
     description="Logout user",
     summary="Logout user -> Add tokens to blacklist",
     responses={
-        status.HTTP_200_OK: {
-            "model": None,
-            "description": "User invalidated"
-        },
-        status.HTTP_403_FORBIDDEN: {
-            "model": None,
-            "description": "No rights",
-        }
+        status.HTTP_200_OK: {"model": None, "description": "User invalidated"},
     },
 )
 async def logout_user(
     user_service: UsersService = Depends(get_users_service),
-    refresh_token_data: tuple[UserJwtSchema, str] = Depends(get_refresh_token_data),  # TODO: fix
-    access_token_data: tuple[UserJwtSchema, str] = Depends(get_access_token_data),
+    raw_access_token: str | None = Depends(get_raw_access_token),
+    raw_refresh_token: str | None = Depends(get_raw_refresh_token),
 ) -> Response:
-
-    _, access_raw_token = access_token_data
-    _, refresh_raw_token = refresh_token_data
-    await user_service.add_token_to_blacklist(access_raw_token, settings.jwt.access_token_expire)
-    await user_service.add_token_to_blacklist(refresh_raw_token, settings.jwt.refresh_token_expire)
+    if raw_access_token is not None:
+        await user_service.add_token_to_blacklist(
+            raw_access_token,
+            settings.jwt.access_token_expire,
+        )
+    if raw_refresh_token is not None:
+        await user_service.add_token_to_blacklist(
+            raw_refresh_token,
+            settings.jwt.refresh_token_expire,
+        )
 
     return await user_service.remove_tokens_from_response(Response())

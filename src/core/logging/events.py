@@ -1,29 +1,35 @@
 import logging
+from dataclasses import dataclass
 from typing import Any
 
 
-# TODO: Convert to pydantic-settings (?)
+@dataclass(frozen=True, slots=True)
+class Event:
+    name: str
+    level: int
+
+
 class Events:
-    rate_limit_login_failed: dict[str, str | int] = {
-        "name": "rate_limit.login_failed",
-        "level": logging.INFO,
-    }
-    rate_limit_login_locked: dict[str, str | int] = {
-        "name": "rate_limit.login_locked",
-        "level": logging.WARNING,
-    }
-    rate_limit_login_success_reset: dict[str, str | int] = {
-        "name": "rate_limit.login_success_reset",
-        "level": logging.INFO,
-    }
+    rate_limit_login_failed: Event = Event(
+        name="rate_limit.login_failed",
+        level=logging.INFO,
+    )
+    rate_limit_login_locked: Event = Event(
+        name="rate_limit.login_locked",
+        level=logging.WARNING,
+    )
+    rate_limit_login_success_reset: Event = Event(
+        name="rate_limit.login_success_reset",
+        level=logging.INFO,
+    )
 
 
 def log_event(
-        logger: logging.Logger,
-        level: int,
-        event: str,
-        message: str | None = None,
-        **fields: Any,
+    logger: logging.Logger,
+    level: int,
+    event: str,
+    message: str | None = None,
+    **fields: Any,
 ) -> None:
     """
     Write one structured log line

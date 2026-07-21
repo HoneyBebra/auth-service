@@ -15,18 +15,33 @@ from src.schemas.v1.jwt import UserJwtSchema
 from src.services.jwt import JwtService
 
 
-async def get_access_token_data(
-    access_token: str | None = Cookie(default=None, alias=settings.jwt.access_token_key_in_cookie),
+async def get_raw_access_token(
+    access_token: str | None = Cookie(
+        default=None,
+        alias=settings.jwt.access_token_key_in_cookie,
+    ),
+) -> str | None:
+    return access_token
+
+
+async def get_raw_refresh_token(
+    refresh_token: str | None = Cookie(
+        default=None,
+        alias=settings.jwt.refresh_token_key_in_cookie,
+    ),
+) -> str | None:
+    return refresh_token
+
+
+async def get_valid_access_token_data(
+    access_token: str | None = Depends(get_raw_access_token),
     jwt_service: JwtService = Depends(get_jwt_service),
 ) -> tuple[UserJwtSchema, str]:
     return await _validate(access_token, "access", jwt_service)
 
 
-async def get_refresh_token_data(
-    refresh_token: str | None = Cookie(
-        default=None,
-        alias=settings.jwt.refresh_token_key_in_cookie,
-    ),
+async def get_valid_refresh_token_data(
+    refresh_token: str | None = Depends(get_raw_refresh_token),
     jwt_service: JwtService = Depends(get_jwt_service),
 ) -> tuple[UserJwtSchema, str]:
     return await _validate(refresh_token, "refresh", jwt_service)
@@ -39,13 +54,11 @@ async def _validate(
 ) -> tuple[UserJwtSchema, str]:
     try:
         return await jwt_service.validate(raw_token, expected_type)
-    except TokenMissingError as e:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=e.message) from e
-    except TokenExpiredError as e:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=e.message) from e
-    except TokenRevokedError as e:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=e.message) from e
-    except TokenWrongTypeError as e:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=e.message) from e
-    except TokenInvalidError as e:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=e.message) from e
+    except (
+        TokenMissingError,
+        TokenExpiredError,
+        TokenRevokedError,
+        TokenWrongTypeError,
+        TokenInvalidError,
+    ) as e:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=e.message) from e

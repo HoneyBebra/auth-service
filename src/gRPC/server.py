@@ -26,12 +26,14 @@ class GrpcServer(user_pb2_grpc.UserServicer):  # type: ignore[name-defined]
                 raw_token=request.access_token,
                 expected_type="access",
             )
-        except (TokenMissingError, TokenExpiredError, TokenInvalidError) as e:
+        except (
+            TokenMissingError,
+            TokenExpiredError,
+            TokenInvalidError,
+            TokenRevokedError,
+            TokenWrongTypeError,
+        ) as e:
             context.set_code(grpc.StatusCode.UNAUTHENTICATED)
-            context.set_details(e.message)
-            return user_pb2.GetUserInfoByTokenResponse()  # type: ignore[name-defined]
-        except (TokenRevokedError, TokenWrongTypeError) as e:
-            context.set_code(grpc.StatusCode.PERMISSION_DENIED)
             context.set_details(e.message)
             return user_pb2.GetUserInfoByTokenResponse()  # type: ignore[name-defined]
 

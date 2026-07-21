@@ -1,3 +1,9 @@
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   auth:
     image: auth
@@ -8,6 +14,7 @@ services:
     build: .
     volumes:
       - ./migration/versions:/opt/app/migration/versions
+    logging: *default-logging
 
   postgres_auth:
     image: postgres:17.4
@@ -19,6 +26,7 @@ services:
     volumes:
       - ./infra/volumes/postgres_auth:/var/lib/postgresql/data
     restart: unless-stopped
+    logging: *default-logging
 
   redis_auth:
     image: redis:7.4.1
@@ -34,6 +42,7 @@ services:
       - ./infra/volumes/redis:/data
       - ./infra/configs/redis:/usr/local/etc/redis
     restart: unless-stopped
+    logging: *default-logging
 
   nginx_auth:
     container_name: nginx_auth
@@ -44,3 +53,4 @@ services:
       - ./infra/configs/nginx_auth/site.conf:/etc/nginx/conf.d/site.conf:ro
     ports:
       - "80:80"
+    logging: *default-logging

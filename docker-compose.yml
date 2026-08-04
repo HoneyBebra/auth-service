@@ -14,6 +14,21 @@ services:
     build: .
     volumes:
       - ./migration/versions:/opt/app/migration/versions
+    depends_on:
+      postgres_auth:
+        condition: service_healthy
+      redis_auth:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          'python -c "import urllib.request; urllib.request.urlopen(''http://127.0.0.1:8000/auth/api/v1/openapi.json'')" || exit 1',
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     logging: *default-logging
 
   postgres_auth:
@@ -26,6 +41,12 @@ services:
     volumes:
       - ./infra/volumes/postgres_auth:/var/lib/postgresql/data
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     logging: *default-logging
 
   redis_auth:
@@ -42,6 +63,13 @@ services:
       - ./infra/volumes/redis:/data
       - ./infra/configs/redis:/usr/local/etc/redis
     restart: unless-stopped
+    healthcheck:
+      test:
+        ["CMD-SHELL", 'redis-cli -a ${REDIS_PASSWORD} ping | grep -q PONG']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     logging: *default-logging
 
   nginx_auth:
@@ -53,4 +81,7 @@ services:
       - ./infra/configs/nginx_auth/site.conf:/etc/nginx/conf.d/site.conf:ro
     ports:
       - "80:80"
+    depends_on:
+      auth:
+        condition: service_healthy
     logging: *default-logging

@@ -1,5 +1,6 @@
 from typing import Any
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from src.core.config._env import ENV_FILE
@@ -15,6 +16,13 @@ class JwtSettings(BaseSettings):
     refresh_token_expire_days: int = 7
     access_token_key_in_cookie: str = "access_token"
     refresh_token_key_in_cookie: str = "refresh_token"
+
+    @field_validator("secret_key")
+    @classmethod
+    def validate_secret_key(cls, value: str) -> str:
+        if len(value) < 32:
+            raise ValueError("JWT secret key must be at least 32 characters")
+        return value
 
     @property
     def access_token_expire(self) -> int:

@@ -1,26 +1,36 @@
-FROM python:3.12-slim
+FROM python:3.12-slim AS builder
 
-ENV APP_DIR /opt/app
-ENV APP_USER user
-ENV APP_GROUP group
+WORKDIR /opt/app
+
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+COPY requirements.txt .
+RUN pip install --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
+
+FROM python:3.12-slim AS runtime
+
+ENV APP_DIR=/opt/app
+ENV APP_USER=user
+ENV APP_GROUP=group
 
 WORKDIR ${APP_DIR}
 
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
 ENV PYTHONPATH=${APP_DIR}
+ENV PATH="/opt/venv/bin:$PATH"
 
+COPY --from=builder /opt/venv /opt/venv
 COPY requirements.txt ./
 COPY migration ./migration
 COPY alembic.ini ./
-
-RUN  python3 -m pip install -r requirements.txt
-
 COPY src src
 
-RUN  groupadd -r ${APP_GROUP} && \
-     useradd -d ${APP_DIR} -r -g ${APP_GROUP} ${APP_USER} && \
-     chown ${APP_USER}:${APP_GROUP} -R ${APP_DIR}
+RUN groupadd -r ${APP_GROUP} && \
+    useradd -d ${APP_DIR} -r -g ${APP_GROUP} ${APP_USER} && \
+    chown ${APP_USER}:${APP_GROUP} -R ${APP_DIR}
 
 USER ${APP_USER}
 

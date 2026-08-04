@@ -45,7 +45,7 @@ async def signup_user(
 
         user = await user_service.create(user_data)
         response = await user_service.add_tokens_to_response(
-            user_id=user.id,
+            user_id=user.id,  # type: ignore[arg-type]
             response=response,
         )
         return response
@@ -99,7 +99,7 @@ async def login_user(
             phone=login_data.phone_number,
         )
         return await user_service.add_tokens_to_response(
-            user_id=user.id,
+            user_id=user.id,  # type: ignore[arg-type]
             response=response,
         )
     except InvalidCredentials as e:

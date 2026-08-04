@@ -28,10 +28,10 @@ class UsersRepository(BaseUsersRepository):
 
         user.login = login
         user.password = password_hash
-        user.encrypted_email = encrypted_email
-        user.encrypted_phone_number = encrypted_phone_number
-        user.email_hash = email_hash
-        user.phone_number_hash = phone_number_hash
+        user.encrypted_email = encrypted_email  # type: ignore[assignment]
+        user.encrypted_phone_number = encrypted_phone_number  # type: ignore[assignment]
+        user.email_hash = email_hash  # type: ignore[assignment]
+        user.phone_number_hash = phone_number_hash  # type: ignore[assignment]
 
         self.session.add(user)
         await self.session.commit()

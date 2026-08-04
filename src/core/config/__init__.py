@@ -20,12 +20,12 @@ load_dotenv()
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=ENV_FILE)
 
-    postgres: PostgresSettings = Field(default_factory=PostgresSettings)
-    redis: RedisSettings = Field(default_factory=RedisSettings)
-    jwt: JwtSettings = Field(default_factory=JwtSettings)
-    app: AppSettings = Field(default_factory=AppSettings)
-    encryption: EncryptionSettings = Field(default_factory=EncryptionSettings)
-    rate_limit: RateLimitSettings = Field(default_factory=RateLimitSettings)
+    postgres: PostgresSettings = Field(default_factory=PostgresSettings)  # type: ignore[arg-type]
+    redis: RedisSettings = Field(default_factory=RedisSettings)  # type: ignore[arg-type]
+    jwt: JwtSettings = Field(default_factory=JwtSettings)  # type: ignore[arg-type]
+    app: AppSettings = Field(default_factory=AppSettings)  # type: ignore[arg-type]
+    encryption: EncryptionSettings = Field(default_factory=EncryptionSettings)  # type: ignore[arg-type]
+    rate_limit: RateLimitSettings = Field(default_factory=RateLimitSettings)  # type: ignore[arg-type]
 
 
 @lru_cache

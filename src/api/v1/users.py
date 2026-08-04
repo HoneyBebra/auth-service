@@ -140,6 +140,7 @@ async def login_user(
 async def get_user(
     access_token_data: tuple[UserJwtSchema, str] = Depends(get_valid_access_token_data),
 ) -> ResponseUserData:
+    # Temporary implementation of the method
     jwt_data, _ = access_token_data
 
     return ResponseUserData(id=jwt_data.sub)

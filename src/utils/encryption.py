@@ -7,8 +7,7 @@ from passlib.context import CryptContext
 
 from src.core.config import settings
 
-# TODO: change to Argon2id
-pwd_context = CryptContext(schemes=["pbkdf2_sha256"])
+pwd_context = CryptContext(schemes=["argon2"])
 
 
 @lru_cache

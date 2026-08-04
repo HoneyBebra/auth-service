@@ -1,9 +1,11 @@
 import re
 
+from src.core.config import settings
+
 
 def validate_password(password: str) -> str:
-    if len(password) < 8:
-        raise ValueError("Password must be at least 8 characters")
+    if len(password) < settings.app.password_min_length:
+        raise ValueError(f"Password must be at least {settings.app.password_min_length} characters")
     if not re.search(r"[A-Z]", password):
         raise ValueError("Password must contain at least one uppercase letter")
     if not re.search(r"[a-z]", password):

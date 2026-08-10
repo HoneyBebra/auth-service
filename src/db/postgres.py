@@ -8,6 +8,9 @@ engine = create_async_engine(
     settings.postgres.dsn,
     echo=settings.postgres.echo,
     future=True,
+    pool_size=settings.postgres.pool_size,
+    max_overflow=settings.postgres.max_overflow,
+    pool_timeout=settings.postgres.pool_timeout,
     pool_pre_ping=True,
     pool_recycle=3600,
     connect_args={

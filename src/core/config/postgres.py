@@ -25,6 +25,9 @@ class PostgresSettings(BaseSettings):
     host: str
     port: str
     echo: bool
+    pool_size: int = 10
+    max_overflow: int = 20
+    pool_timeout: int = 30
 
     @property
     def dsn(self) -> str:

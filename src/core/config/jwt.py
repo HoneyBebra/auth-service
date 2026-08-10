@@ -10,7 +10,7 @@ class JwtSettings(BaseSettings):
     model_config = SettingsConfigDict(env_file=ENV_FILE, env_prefix="JWT_")
 
     secret_key: str
-    algorithm: str
+    algorithm: str = "HS256"
     blacklist_redis_prefix: str = "auth:jwt:bl"
     access_token_expire_minutes: int = 30
     refresh_token_expire_days: int = 7

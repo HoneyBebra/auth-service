@@ -1,5 +1,4 @@
-from typing import Annotated
-from uuid import UUID
+from typing import Annotated, Any
 
 from pydantic import AfterValidator, BaseModel, EmailStr, Field, model_validator
 
@@ -15,10 +14,12 @@ class UserEntersDataBaseSchema(UserDataBase):
     password: Annotated[str, AfterValidator(validate_password)]
 
     @model_validator(mode="before")
-    def check_email_or_phone_number_exists(self) -> "UserEntersDataBaseSchema":
-        if not self.get("email") and not self.get("phone_number"):
-            raise ValueError("email or phone number is required")
-        return self
+    @classmethod
+    def check_email_or_phone_number_exists(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            if not data.get("email") and not data.get("phone_number"):
+                raise ValueError("email or phone number is required")
+        return data
 
 
 class UserRegisterSchema(UserEntersDataBaseSchema):
@@ -26,10 +27,12 @@ class UserRegisterSchema(UserEntersDataBaseSchema):
     confirm_password: Annotated[str, AfterValidator(validate_password)]
 
     @model_validator(mode="before")
-    def check_passwords_match(self) -> "UserRegisterSchema":
-        if self.get("password") != self.get("confirm_password"):
-            raise ValueError("passwords do not match")
-        return self
+    @classmethod
+    def check_passwords_match(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            if data.get("password") != data.get("confirm_password"):
+                raise ValueError("passwords do not match")
+        return data
 
 
 class UserLoginSchema(UserEntersDataBaseSchema):
@@ -37,4 +40,4 @@ class UserLoginSchema(UserEntersDataBaseSchema):
 
 
 class ResponseUserData(BaseModel):
-    id: UUID
+    id: str

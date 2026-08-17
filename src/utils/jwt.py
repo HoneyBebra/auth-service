@@ -2,10 +2,10 @@ import time
 from typing import Literal
 from uuid import UUID
 
-from jose import jwt
+import jwt
 
 from src.core.config import settings
-from src.exceptions.jwt import WrongTokenType
+from src.exceptions.jwt import TokenWrongTypeError
 
 
 async def create_token(
@@ -19,17 +19,17 @@ async def create_token(
     }
 
     if token_type == "access":
-        raw_data["exp"] = iat + settings.access_token_expire
+        raw_data["exp"] = iat + settings.jwt.access_token_expire
     elif token_type == "refresh":
-        raw_data["exp"] = iat + settings.refresh_token_expire
+        raw_data["exp"] = iat + settings.jwt.refresh_token_expire
     else:
-        raise WrongTokenType
+        raise TokenWrongTypeError
 
     to_encode = raw_data.copy()
     to_encode.update({"type": token_type})
     encoded_jwt = jwt.encode(
-        claims=to_encode,
-        key=settings.jwt_secret_key,
-        algorithm=settings.jwt_algorithm,
+        payload=to_encode,
+        key=settings.jwt.secret_key,
+        algorithm=settings.jwt.algorithm,
     )
     return encoded_jwt

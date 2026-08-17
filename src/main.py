@@ -1,7 +1,7 @@
 # ruff: noqa: I001
 
 from contextlib import asynccontextmanager
-from typing import AsyncIterator
+from collections.abc import AsyncIterator
 
 import grpc
 import uvicorn
@@ -10,34 +10,49 @@ from fastapi.responses import ORJSONResponse
 
 from src.api.v1.users import router as users_router
 from src.core.config import settings
-from src.core.logger import LOGGING
+from src.core.logging.logger import LOGGING
+from src.db.postgres import engine
+from src.db.redis import close_redis, get_redis_client, init_redis
 from src.gRPC.protos import user_pb2_grpc
-from src.gRPC.server import get_grpc_session
+from src.gRPC.server import GrpcServer
+from src.repositories.jwt_token import JwtTokenRepository
+from src.services.jwt import JwtService
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI) -> AsyncIterator:
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    await init_redis()
 
-    server = grpc.aio.server()
-    user_pb2_grpc.add_UserServicer_to_server(await get_grpc_session(), server)
-    server.add_insecure_port(f"[::]:{settings.grpc_port}")
+    jwt_token_repository = JwtTokenRepository(session=get_redis_client())
+    jwt_service = JwtService(jwt_token_repository=jwt_token_repository)
 
-    await server.start()
-    yield
-    await server.stop()
+    grpc_server = grpc.aio.server()
+    user_pb2_grpc.add_UserServicer_to_server(
+        GrpcServer(jwt_service=jwt_service),
+        grpc_server,
+    )
+    grpc_server.add_insecure_port(f"[::]:{settings.app.grpc_port}")
+
+    await grpc_server.start()
+    try:
+        yield
+    finally:
+        await grpc_server.stop(grace=5)
+        await close_redis()
+        await engine.dispose()
 
 
 app = FastAPI(
-    title=settings.app_name,
-    description=settings.app_description,
-    version=settings.app_version,
-    docs_url=f"{settings.api_v1_prefix}/openapi",
-    openapi_url=f"{settings.api_v1_prefix}/openapi.json",
+    title=settings.app.name,
+    description=settings.app.description,
+    version=settings.app.version,
+    docs_url=f"{settings.app.api_v1_prefix}/openapi",
+    openapi_url=f"{settings.app.api_v1_prefix}/openapi.json",
     default_response_class=ORJSONResponse,
     lifespan=lifespan,
 )
 
-router = APIRouter(prefix=settings.api_v1_prefix)
+router = APIRouter(prefix=settings.app.api_v1_prefix)
 router.include_router(users_router)
 app.include_router(router)
 

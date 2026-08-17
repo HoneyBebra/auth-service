@@ -3,7 +3,7 @@ from typing import Any
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from redis.asyncio.retry import Retry
 from redis.backoff import ExponentialBackoff
-from redis.exceptions import ConnectionError, TimeoutError
+from redis.exceptions import ConnectionError, TimeoutError  # noqa: A004
 
 from src.core.config._env import ENV_FILE
 

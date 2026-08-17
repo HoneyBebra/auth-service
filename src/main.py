@@ -1,7 +1,7 @@
 # ruff: noqa: I001
 
 from contextlib import asynccontextmanager
-from typing import AsyncIterator
+from collections.abc import AsyncIterator
 
 import grpc
 import uvicorn

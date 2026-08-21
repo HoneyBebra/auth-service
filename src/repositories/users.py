@@ -77,6 +77,9 @@ class UsersRepository(BaseUsersRepository):
         result = await self.session.execute(query)
         return result.scalars().first()
 
+    async def end_transaction(self) -> None:
+        await self.session.commit()
+
     @retry(**sqlalchemy_backoff_decorator_settings(settings.app.backoff_retries_count))
     async def update(  # type: ignore[empty-body]
         self,

@@ -11,5 +11,6 @@ class AppSettings(BaseSettings):
     version: str = "0.1.0"
     api_v1_prefix: str = "/auth/api/v1"
     password_min_length: int = 8
+    password_max_length: int = 128
     backoff_retries_count: int = 10
     grpc_port: int = 50051

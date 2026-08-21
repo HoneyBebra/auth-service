@@ -1,3 +1,5 @@
+import asyncio
+
 from fastapi import Response
 
 from src.core.config import settings
@@ -38,7 +40,8 @@ class UsersService:
                 raise UserAlreadyExists("email")
             raise UserAlreadyExists("phone_number")
 
-        password_hash = hash_password(password=user_data.password)
+        await self.users_repository.end_transaction()
+        password_hash = await asyncio.to_thread(hash_password, user_data.password)
 
         user = await self.users_repository.create(
             login=user_data.login,
@@ -64,7 +67,11 @@ class UsersService:
             phone_number_hash=phone_number_hash,
         )
 
-        if not users or not verify_password(user_data.password, users[0].password):
+        await self.users_repository.end_transaction()
+
+        if not users or not await asyncio.to_thread(
+            verify_password, user_data.password, users[0].password
+        ):
             raise InvalidCredentials
 
         return users[0]

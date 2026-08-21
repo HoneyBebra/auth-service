@@ -37,6 +37,10 @@ class BaseUsersRepository(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    async def end_transaction(self) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
     async def update(
         self,
         user_id: UUID,

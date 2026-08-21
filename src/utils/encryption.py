@@ -7,7 +7,14 @@ from passlib.context import CryptContext
 
 from src.core.config import settings
 
-pwd_context = CryptContext(schemes=["argon2"])
+pwd_context = CryptContext(
+    schemes=["argon2"],
+    deprecated="auto",
+    argon2__type="ID",
+    argon2__memory_cost=65536,
+    argon2__time_cost=3,
+    argon2__parallelism=2,
+)
 
 
 @lru_cache
